@@ -1,0 +1,46 @@
+dn: uid=malvezzi,ou=people,dc=unimore,dc=it
+eduPersonPrincipalName: malvezzi@unimore.it
+mail: francesco.malvezzi@unimore.it
+uid: malvezzi
+unimoreDiporg4: {1}{021097}Servizi informatici (gestionali,statistica,web,iden
+ tity management)
+unimoreDiporg3: {1}{021097}Servizi informatici (gestionali,statistica,web,iden
+ tity management)
+unimoreDiporg2: {1}{021087}DIREZIONE PIANIFICAZIONE,VALUTAZIONE E FORMAZIONE
+unimoreDiporg1: {1}{021011}Direzione Amministrativa
+unimoredipcodicesettore: {1}000000000000
+objectClass: organizationalPerson
+objectClass: schacPersonalCharacteristics
+objectClass: person
+objectClass: unimoreAccount
+objectClass: posixAccount
+objectClass: eduMember
+objectClass: sambaSamAccount
+objectClass: shadowAccount
+objectClass: eduPerson
+objectClass: inetOrgPerson
+objectClass: top
+description: Super DIREZIONE PIANIFICAZIONE,VALUTAZIONE E FORMAZIONE
+uidNumber: 41312
+sn: MALVEZZI
+intelligence: medium/low
+gidNumber: 41312
+gecos: Francesco MALVEZZI
+unimoreDipAttivita: {1}In servizio
+unimoredipsettore: {1}Non assegnato
+ou: Dipendenti
+ou: people
+unimoremailprincipale: francesco.malvezzi@unimore.it
+homeDirectory: /homel/malvezzi
+givenName: Francesco
+sambaSID: S-1-5-21-3124769388-3895531602-742500631-83624
+unimoreDipAfferenzaDidattica: {1}Non assegnato
+mainUid: malvezzi
+eduPersonAffiliation: member
+eduPersonAffiliation: staff
+eduPersonAffiliation: employee
+loginShell: /bin/mosh
+cn: Francesco MALVEZZI
+unimoreDipRuolo: {1}Personale tecnico amministrativo
+unimoretelephonenumber: 39 059 2058018
+
