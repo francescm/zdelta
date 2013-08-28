@@ -37,7 +37,7 @@ class LdifTester < Test::Unit::TestCase
     new = Ldif.new("uid=malvezzi,ou=people,dc=unimore,dc=it", {})
     diff = @old - new
     assert diff
-    puts diff.map{|attr| attr.to_ldif(@old.dn)}.join("-\n")
+#    puts diff.map{|attr| attr.to_ldif(@old.dn)}.join("-\n")
     
   end
 end
