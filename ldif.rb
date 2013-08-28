@@ -2,6 +2,7 @@
 
 require 'ldap'
 require 'ldap/ldif'
+require 'ldif_diff'
 
 class Ldif
   attr_reader :dn, :attrs
@@ -12,33 +13,47 @@ class Ldif
 
   def -(other)
     raise RuntimeError, "dn diversi: #{@dn}, #{other.dn}" unless other.dn.eql? @dn
-    to_add = other.attrs.keys - @attrs.keys
-    to_delete = @attrs.keys - other.attrs.keys
-    commons = @attrs.keys & other.attrs.keys
+    if @attrs.empty?
+      #e' una add
+      res = []
+      other.attrs.keys.each do |attr|
+        res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, other.attrs[attr])
+      end
+      LdifDiff.new(@dn, "add", res)
+
+    elsif other.attrs.empty?
+      #e' una delete
+      LdifDiff.new(@dn, "delete", {})
+
+    else
+      to_add = other.attrs.keys - @attrs.keys
+      to_delete = @attrs.keys - other.attrs.keys
+      commons = @attrs.keys & other.attrs.keys
     
-    res = []
+      res = []
 
-    to_add.each do |attr|
-      res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, other.attrs[attr])
-    end
-
-    to_delete.each do |attr|
-      res << LDAP::Mod.new(LDAP::LDAP_MOD_DELETE, attr, @attrs[attr])
-    end
-
-    commons.each do |attr|
-      values_to_add = other.attrs[attr] - @attrs[attr]
-      values_to_delete = @attrs[attr] - other.attrs[attr]
-      unless values_to_add.empty?
-        res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, values_to_add)
-      end
-      unless values_to_delete.empty?
-        res << LDAP::Mod.new(LDAP::LDAP_MOD_DELETE, attr, values_to_delete)
+      to_add.each do |attr|
+        res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, other.attrs[attr])
       end
 
-    end
+      to_delete.each do |attr|
+        res << LDAP::Mod.new(LDAP::LDAP_MOD_DELETE, attr, @attrs[attr])
+      end
 
-    res
+      commons.each do |attr|
+        values_to_add = other.attrs[attr] - @attrs[attr]
+        values_to_delete = @attrs[attr] - other.attrs[attr]
+        unless values_to_add.empty?
+          res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, values_to_add)
+        end
+        unless values_to_delete.empty?
+          res << LDAP::Mod.new(LDAP::LDAP_MOD_DELETE, attr, values_to_delete)
+        end
+
+      end
+      
+      LdifDiff.new(@dn, "modify", res)
+    end
   end
 
 end

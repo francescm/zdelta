@@ -28,16 +28,27 @@ class LdifTester < Test::Unit::TestCase
   def test_diff
     diff = @old - @new
     assert diff
-    assert_equal 4, diff.size
-    assert diff.detect{|mod| ["Super DIREZIONE PIANIFICAZIONE,VALUTAZIONE E FORMAZIONE"].eql? mod.mod_vals and LDAP::LDAP_MOD_ADD.eql? mod.mod_op}
+    assert_equal 4, diff.mods.size
+    assert diff.mods.detect{|mod| ["Super DIREZIONE PIANIFICAZIONE,VALUTAZIONE E FORMAZIONE"].eql? mod.mod_vals and LDAP::LDAP_MOD_ADD.eql? mod.mod_op}
   end
 
-  def test_diff_new_empty    
-#se il new e' empty, devo fare un delete
+  def test_add_entry
+#se il old e' empty, e' una add
+    old = Ldif.new("uid=malvezzi,ou=people,dc=unimore,dc=it", {})
+    diff = old - @new
+    assert diff
+    assert_equal "changetype: add", diff.to_ldif.split("\n")[1]
+  end
+
+  def test_delete_entry
+#se il new e' empty, e' una delete
     new = Ldif.new("uid=malvezzi,ou=people,dc=unimore,dc=it", {})
     diff = @old - new
     assert diff
-#    puts diff.map{|attr| attr.to_ldif(@old.dn)}.join("-\n")
-    
+    assert_equal 2, diff.to_ldif.split("\n").size
+    assert_equal "changetype: delete", diff.to_ldif.split("\n")[1]
+#puts diff.to_ldif
   end
+
+
 end

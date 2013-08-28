@@ -18,10 +18,11 @@ class LdifDiff
   end
 
   def to_ldif
-    raise RuntimeError, "mods empty: #{@dn}, #{@type}" if @mods.empty?
+    raise RuntimeError, "mods empty: #{@dn}, #{@type}" if @mods.empty? and not @type.eql? "delete"
 
     res = "dn: #{@dn}\n"
     res += "changetype: #{@type}\n"
+    return res if "delete".eql? @type
 
     last_mod = @mods.last
     mods = @mods[0..-2].map do |mod| 
@@ -45,11 +46,11 @@ class LdifDiff
   private
   def print_chunk(action, mod, is_last)
     chunk = ""
-    chunk += "#{action}: #{mod.mod_type}\n"
+    chunk += "#{action}: #{mod.mod_type}\n" unless "add".eql? @type
     mod.mod_vals.each do |value|
       chunk += "#{mod.mod_type}: #{value}\n"
     end
-    chunk += "-\n" unless is_last
+    chunk += "-\n" unless is_last or "add".eql? @type
     chunk
   end
 end

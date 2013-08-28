@@ -13,10 +13,20 @@ class LdifDiffTester < Test::Unit::TestCase
     @delete2 = LDAP::Mod.new(LDAP::LDAP_MOD_DELETE, "delta", %w{sette})
   end
 
-  def test_initialize_and_not_ends_with_dash
+  def test_initialize_and_does_not_end_with_dash
     ldif_diff = LdifDiff.new("uid=test", "modify", [@add1, @add2])
     assert ldif_diff    
     assert_not_equal "-", ldif_diff.to_ldif.split("\n").last
+    assert_match "alpha", ldif_diff.to_ldif
+    assert_match "beta", ldif_diff.to_ldif
+#    puts ldif_diff.to_ldif
+  end
+
+  def test_create_entry
+    ldif_diff = LdifDiff.new("uid=test", "add", [@add1, @add2])
+    assert ldif_diff    
+    assert_not_match /-/, ldif_diff.to_ldif
+    assert_not_match /^add/, ldif_diff.to_ldif
     assert_match "alpha", ldif_diff.to_ldif
     assert_match "beta", ldif_diff.to_ldif
 #    puts ldif_diff.to_ldif
