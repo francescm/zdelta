@@ -28,19 +28,23 @@ def process_parser(entries, buffer)
   entries << parsed_entries.first
 end
 
-def zeromq
-  context = ZMQ::Context.new(1)
-  publisher = context.socket(ZMQ::PUB)
-  publisher.bind("ipc://weather.ipc")
-#  publisher.bind("tcp://*:5556")
-  publisher
-end
 
 def process(publisher, buffer)
-   publisher.send_string(buffer.join)
+  publisher.send_string(buffer.join)
+  true
 end
 
-publisher = zeromq
+def shutdown(publisher)
+  publisher.send_string("__SHUTDOWN__")
+  true
+end
+
+
+context = ZMQ::Context.new(1)
+publisher = context.socket(ZMQ::PUSH)
+publisher.setsockopt(ZMQ::IDENTITY, 'file-loader')
+publisher.bind("ipc://weather.ipc")
+#publisher.bind("tcp://localhost:5556")
 
 File.open(BULK).each_line do |l|
   buffer << l
@@ -58,6 +62,10 @@ File.open(BULK).each_line do |l|
     end
     buffer.clear
   end
+end
+
+1.upto(10) do
+  shutdown(publisher)
 end
 
 puts
