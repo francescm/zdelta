@@ -40,7 +40,6 @@ while true
   if record = parse(buffer)
     entries << { record.dn => record }
     forwarder.send_string record.dn
-    puts "#{identity}: #{record.dn}"
   end
 end
 
