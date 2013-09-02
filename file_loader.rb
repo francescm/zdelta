@@ -6,8 +6,10 @@ require 'ldap/ldif'
 require 'parser'
 require 'rubygems'
 require 'ffi-rzmq'
+require 'yaml'
 
-BULK = "bulk.ldif"
+FILE = ENV['DATA_FILE']
+CLIENTS = ENV['CLIENTS'].to_i
 
 progress = 0
 start_time = Time.new
@@ -16,39 +18,24 @@ buffer = []
 
 entries = []
 
-def process_old(entries, buffer)
-  entry = LDAP::LDIF.parse_entry(buffer)
-  entries << entry
+def process(sender, buffer)
+  sender.send_string(buffer.join)
   true
 end
 
-def process_parser(entries, buffer)
-  buffer << ""
-  parsed_entries = Parser.parse(buffer)
-  entries << parsed_entries.first
-end
-
-
-def process(publisher, buffer)
-  publisher.send_string(buffer.join)
+def shutdown(sender)
+  sender.send_string("__SHUTDOWN__")
   true
 end
-
-def shutdown(publisher)
-  publisher.send_string("__SHUTDOWN__")
-  true
-end
-
 
 context = ZMQ::Context.new(1)
-publisher = context.socket(ZMQ::PUSH)
-publisher.bind("ipc://loader.ipc")
+sender = context.socket(ZMQ::PUSH)
+sender.bind ENV['LOADER_SOCKET']
 
-File.open(BULK).each_line do |l|
+File.open(FILE).each_line do |l|
   buffer << l
   if "\n".eql? l
-    process(publisher, buffer)
-    STDOUT.write "\r#{progress}"
+    process(sender, buffer)
     progress = progress + 1
     if (progress % 10000) == 0
       puts "\r#{progress}"
@@ -61,9 +48,8 @@ File.open(BULK).each_line do |l|
   end
 end
 
-1.upto(10) do
-  shutdown(publisher)
+1.upto(CLIENTS) do
+  shutdown(sender)
+  sleep 0.1
 end
 
-puts
-puts entries.size

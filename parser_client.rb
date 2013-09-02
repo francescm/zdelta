@@ -2,44 +2,53 @@
 
 require 'ldap'
 require 'ldap/ldif'
-require 'parser'
 require 'rubygems'
 require 'ffi-rzmq'
 require 'yaml'
 
 context = ZMQ::Context.new(1)
 
-puts "Ready to parse ldif ..."
-subscriber = context.socket(ZMQ::PULL)
-subscriber.connect("ipc://loader.ipc")
+receiver = context.socket(ZMQ::PULL)
+receiver.connect ENV['LOADER_SOCKET']
+
+identity = "parser-#{(0..10).to_a.map {(65 + rand(21)).chr}.join}"
 
 forwarder = context.socket(ZMQ::PUSH)
-forwarder.setsockopt(ZMQ::IDENTITY, 'parser')
-forwarder.bind("ipc://assembler.ipc")
+forwarder.setsockopt(ZMQ::IDENTITY, identity)
+forwarder.connect ENV['CATALOG_SOCKET']
 
 start_time = Time.new
 
 entries = []
+
+def parse(buffer)
+  record = LDAP::LDIF.parse_entry(buffer)
+end
 
 parsed = 0
 while true
   parsed += 1
 
   buffer = ""
-  subscriber.recv_string(buffer)
-  break if buffer.eql? "__SHUTDOWN__"
+  receiver.recv_string(buffer = "")
+  if buffer.eql? "__SHUTDOWN__"
+#    puts "#{identity}: #{buffer}"
+    break
+  end
   buffer = buffer.split("\n")
-  buffer << ""
-  parsed_entries = Parser.parse(buffer)
-  entries << parsed_entries.first
-  STDOUT.write  "\r#{parsed}"
+  buffer << "\n"
+  if record = parse(buffer)
+    entries << { record.dn => record }
+    forwarder.send_string record.dn
+    puts "#{identity}: #{record.dn}"
+  end
 end
 
-#suffix = (0..10).to_a.map {(65 + rand(21)).chr}.join
+
 #filename = "dump-#{suffix}.yaml"
 #File.open(filename, "w") {|f| YAML.dump(entries, f)}
 
-forwarder.send_string YAML.dump(entries)
+forwarder.send_string "__END_OF_DATA__"
+puts "#{identity}: __END_OF_DATA__"
+#puts "forwarded #{parsed} entries in #{Time.new - start_time} (#{identity})"
 
-puts
-puts "forwarded #{parsed} entries in #{Time.new - start_time}"
