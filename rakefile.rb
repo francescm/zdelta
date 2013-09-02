@@ -4,9 +4,9 @@ PARSERS = 8
 
 task :conf do
   ENV['CLIENTS'] = PARSERS.to_s
-#  ENV['DATA_FILE'] = "bulk.ldif"
+  ENV['DATA_FILE'] = "bulk.ldif"
 #  ENV['DATA_FILE'] = "registered.ldif"
-  ENV['DATA_FILE'] = "users.ldif"
+#  ENV['DATA_FILE'] = "users.ldif"
   ENV['LOADER_SOCKET'] = "ipc://loader.ipc"
   ENV['CATALOG_SOCKET'] = "ipc://assembler.ipc"
 end
