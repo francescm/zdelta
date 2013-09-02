@@ -1,0 +1,23 @@
+= LDIF =
+
+Progetto di delta in ruby con librerie ldap::ldif.
+
+== ldif_diff.rb ==
+
+Helper per rendere stampabili i Mod risultanti dal delta. Probebilmente si poteva usare:
+LDAP::LDIF.mods_to_ldif( dn, *mods )
+
+== parser.rb ==
+
+Con LDAP::LDIF.parse_file ruby non riesce a fare il load di un ldif di 170mila utenti in tempi civili. jruby ci riuscirebbe, ma poi esaurisce lo heap.
+
+Ho provato a capire se con un loader custom il processo e' piu' veloce, ma si guadagna solo il 30 %
+
+== file_loader.rb ==
+
+Per ottenere dei buoni tempi di caricamento e parsing degli ldif, la soluzione migliore e' l'esecuzione in parallelo.
+
+Il comando per la esecuzione del parsing e' rake parse, che chiama un file_loader che ripartisce il carico su 8 client_parser. Non riesco a mandare i dati verso il sink (chunk_assembler): sembra che i client_parser siano bloccanti.
+
+
+

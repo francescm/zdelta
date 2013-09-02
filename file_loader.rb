@@ -42,18 +42,15 @@ end
 
 context = ZMQ::Context.new(1)
 publisher = context.socket(ZMQ::PUSH)
-publisher.setsockopt(ZMQ::IDENTITY, 'file-loader')
-publisher.bind("ipc://weather.ipc")
-#publisher.bind("tcp://localhost:5556")
+publisher.bind("ipc://loader.ipc")
 
 File.open(BULK).each_line do |l|
   buffer << l
   if "\n".eql? l
-#    process(entries, buffer)
     process(publisher, buffer)
     STDOUT.write "\r#{progress}"
     progress = progress + 1
-    if (progress % 1000) == 0
+    if (progress % 10000) == 0
       puts "\r#{progress}"
       new_time = Time.new
       puts "total time : #{new_time - start_time}"

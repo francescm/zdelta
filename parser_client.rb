@@ -5,19 +5,22 @@ require 'ldap/ldif'
 require 'parser'
 require 'rubygems'
 require 'ffi-rzmq'
+require 'yaml'
 
 context = ZMQ::Context.new(1)
 
 puts "Ready to parse ldif ..."
 subscriber = context.socket(ZMQ::PULL)
-#subscriber.connect("tcp://localhost:5556")
-subscriber.connect("ipc://weather.ipc")
-#rc = subscriber.setsockopt(ZMQ::SUBSCRIBE, "")
-#ZMQ::Util.resultcode_ok?(rc) ? puts("succeeded") : puts("failed")
+subscriber.connect("ipc://loader.ipc")
+
+forwarder = context.socket(ZMQ::PUSH)
+forwarder.setsockopt(ZMQ::IDENTITY, 'parser')
+forwarder.bind("ipc://assembler.ipc")
 
 start_time = Time.new
 
 entries = []
+
 parsed = 0
 while true
   parsed += 1
@@ -32,5 +35,11 @@ while true
   STDOUT.write  "\r#{parsed}"
 end
 
+#suffix = (0..10).to_a.map {(65 + rand(21)).chr}.join
+#filename = "dump-#{suffix}.yaml"
+#File.open(filename, "w") {|f| YAML.dump(entries, f)}
+
+forwarder.send_string YAML.dump(entries)
+
 puts
-puts "parsed #{entries.size} entries in #{Time.new - start_time}"
+puts "forwarded #{parsed} entries in #{Time.new - start_time}"
