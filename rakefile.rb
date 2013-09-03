@@ -4,7 +4,8 @@ PARSERS = 8
 
 task :conf do
   ENV['CLIENTS'] = PARSERS.to_s
-  ENV['DATA_FILE'] = "bulk.ldif"
+  ENV['OLD_FILE'] = "bulk.ldif"
+  ENV['NEW_FILE'] = "new.ldif"
 #  ENV['DATA_FILE'] = "registered.ldif"
 #  ENV['DATA_FILE'] = "users.ldif"
   ENV['LOADER_SOCKET'] = "ipc://loader.ipc"
@@ -29,10 +30,11 @@ end
 def parser_list
   build_list = []
   build_list << :assembler
+  build_list << :loader
   1.upto PARSERS do |i|
     build_list << "parser#{i}".to_sym
   end
-  build_list << :loader
+  build_list
 end
 
 @parser_list  = parser_list

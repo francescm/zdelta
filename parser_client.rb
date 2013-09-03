@@ -1,18 +1,19 @@
 #encoding: utf-8
 
-#require 'ldap'
-#require 'ldap/ldif'
-require 'parser'
+require 'ldap'
+require 'ldap/ldif'
+#require 'parser'
 require 'rubygems'
 require 'ffi-rzmq'
-require 'yaml'
+#require 'yaml'
 
 context = ZMQ::Context.new(1)
 
-receiver = context.socket(ZMQ::PULL)
-receiver.connect ENV['LOADER_SOCKET']
-
 identity = "parser-#{(0..10).to_a.map {(65 + rand(21)).chr}.join}"
+
+receiver = context.socket(ZMQ::DEALER)
+receiver.setsockopt(ZMQ::IDENTITY, identity)
+receiver.connect ENV['LOADER_SOCKET']
 
 forwarder = context.socket(ZMQ::PUSH)
 forwarder.setsockopt(ZMQ::IDENTITY, identity)
@@ -20,9 +21,11 @@ forwarder.connect ENV['CATALOG_SOCKET']
 
 start_time = Time.new
 
+receiver.send_string "#{identity} says: hallo master"
+
 entries = []
 
-def parse(buffer)
+def parse_ok(buffer)
   #  record = LDAP::LDIF.parse_entry(buffer)
   entry = Parser.parse(buffer).first
   if entry
@@ -31,6 +34,16 @@ def parse(buffer)
     nil
   end
 end
+
+def parse(buffer)
+  record = LDAP::LDIF.parse_entry(buffer)
+  if record
+    {record.dn => buffer}
+  else
+    nil
+  end
+end
+
 
 parsed = 0
 while true

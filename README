@@ -13,15 +13,16 @@ Con LDAP::LDIF.parse_file ruby non riesce a fare il load di un ldif di 170mila u
 
 Ho provato a capire se con un loader custom il processo e' piu' veloce, ma si guadagna solo il 30 %
 
+La soluzione e' far fare il parse il parallelo ai client_parser, ma solo in caso di uso: cioe' non tenere in memoria i record esito del parse.
+
 == file_loader.rb ==
 
 Per ottenere dei buoni tempi di caricamento e parsing degli ldif, la soluzione migliore e' l'esecuzione in parallelo.
 
-Il comando per la esecuzione del parsing e' rake parse, che chiama un file_loader che ripartisce il carico su 8 client_parser. Non riesco a mandare i dati verso il sink (chunk_assembler): sembra che i client_parser siano bloccanti.
-
-Esempio che vorrei imitare: http://zguide.zeromq.org/page:all#Divide-and-Conquer
+Il comando per la esecuzione del parsing e' rake parse, che chiama un file_loader che ripartisce il carico su 8 client_parser. 
 
 Non sembra uan buona idea fare passare gli ldif in formato yaml dai client_parse al chunk_assembler perche' la serializzazione e' molto costosa.
 
+Sembra una buona idea lasciare gli ldif ai parser, che comunicano i dn in loro possesso ad un catalogo. Il catalogo potrebbe essere lo stesso file_loader, che sa gia' in partenza i dn che spedisce.
 
-Sembra una buona idea lasciare gli ldif ai parser, che comunicano i dn in loro possesso ad un catalogo. Non so pero' come far si' che ogni parser comunichi il suo indirizzo.
+Il pattern della comunicazione tra file_loader e parse_client e' rispettivamente DEALER e ROUTER.
