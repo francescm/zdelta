@@ -18,7 +18,9 @@ class LdifDiff
   end
 
   def to_ldif
-    raise RuntimeError, "mods empty: #{@dn}, #{@type}" if @mods.empty? and not @type.eql? "delete"
+    if @mods.empty? and not @type.eql? "delete"
+      return "# #{@dn}"
+    end
 
     res = "dn: #{@dn}\n"
     res += "changetype: #{@type}\n"

@@ -14,7 +14,7 @@ class Ldif
   def -(other)
     raise RuntimeError, "dn diversi: #{@dn}, #{other.dn}" unless other.dn.eql? @dn
     if @attrs.empty?
-      #e' una add
+      #e' la add di una entry
       res = []
       other.attrs.keys.each do |attr|
         res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, other.attrs[attr])
@@ -22,7 +22,7 @@ class Ldif
       LdifDiff.new(@dn, "add", res)
 
     elsif other.attrs.empty?
-      #e' una delete
+      #e' una delete della entry
       LdifDiff.new(@dn, "delete", {})
 
     else
@@ -51,7 +51,6 @@ class Ldif
         end
 
       end
-      
       LdifDiff.new(@dn, "modify", res)
     end
   end

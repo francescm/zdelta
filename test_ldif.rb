@@ -50,5 +50,15 @@ class LdifTester < Test::Unit::TestCase
 #puts diff.to_ldif
   end
 
+  def test_entry_without_mod
+    the_same_ldif = LDAP::LDIF.parse_file(NEW, false).first
+    old = Ldif.new(the_same_ldif.dn, the_same_ldif.attrs)
+    diff = old - @new
+    assert diff
+    assert_equal 1, diff.to_ldif.split("\n").size
+    assert_match /^#/, diff.to_ldif.split("\n").first
+
+  end
+
 
 end

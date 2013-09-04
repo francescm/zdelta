@@ -8,7 +8,8 @@ require 'rubygems'
 require 'ffi-rzmq'
 #require 'yaml'
 
-OLD = ENV['DATA_FILE']
+OLD = ENV['OLD_FILE']
+NEW = ENV['NEW_FILE']
 CLIENTS = ENV['CLIENTS'].to_i
 
 progress = 0
@@ -19,11 +20,21 @@ buffer = []
 memory = {} #contiene le coppie dn -> client cui sono stati spediti 
             # i dati della entry
 
+def get_dn(buffer)
+  dn = buffer.detect{|attr| attr.match /^dn:/}.split(": ").last.chomp
+end
+
 def process(socket, buffer, client)
   socket.send_string client, ZMQ::SNDMORE
   socket.send_string(buffer.join)
-  dn = buffer.detect{|attr| attr.match /^dn:/}.split(": ").last.strip
+  dn = get_dn(buffer)
   dn
+end
+
+def send_match_data(socket, buffer, client)
+  socket.send_string client, ZMQ::SNDMORE
+  socket.send_string(buffer.join)
+  true
 end
 
 def shutdown(socket, client)
@@ -31,6 +42,13 @@ def shutdown(socket, client)
   socket.send_string("__SHUTDOWN__")
   true
 end
+
+def next_step(socket, client)
+  socket.send_string client, ZMQ::SNDMORE
+  socket.send_string("__NEXT_STEP__")
+  true
+end
+
 
 context = ZMQ::Context.new(1)
 socket = context.socket(ZMQ::ROUTER)
@@ -49,10 +67,13 @@ while (still_missing != 0)
 end
 
 #puts "clients: #{client_addrs.join(", ")}"
-#controllo che non ci siano degli indirizzi doppi
+#controllo che non ci siano degli indirizzi doppi:
+client_addrs.inject [] do |prev, el| 
+  raise RuntimeError, "#{el} compare due volte" if prev.include? el
+  prev << el
+end
 
-
-File.open(FILE).each_line do |l|
+File.open(OLD).each_line do |l|
   buffer << l
   if "\n".eql? l
     client = client_addrs[ progress % 8 ]
@@ -71,6 +92,27 @@ File.open(FILE).each_line do |l|
 end
 
 client_addrs.each do |client|
-  shutdown(socket, client)
+  next_step(socket, client)
 end
 
+File.open(NEW).each_line do |l|
+  buffer << l
+  if "\n".eql? l
+    dn = get_dn(buffer)
+    client = memory[dn] 
+    send_match_data(socket, buffer, client)
+    progress = progress + 1
+    if (progress % 10000) == 0
+      puts "\r#{progress}"
+      new_time = Time.new
+      puts "total time : #{new_time - start_time}"
+      puts "incremental time : #{new_time - incremental}" if incremental
+      incremental = new_time
+    end
+    buffer.clear
+  end
+end
+
+client_addrs.each do |client|
+  shutdown(socket, client)
+end

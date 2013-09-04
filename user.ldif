@@ -23,7 +23,6 @@ objectClass: top
 description: DIREZIONE PIANIFICAZIONE,VALUTAZIONE E FORMAZIONE
 uidNumber: 41312
 sn: MALVEZZI
-unimorefacsimiletelephonenumber: 39 059 2058034
 gidNumber: 41312
 gecos: Francesco MALVEZZI
 unimoreDipAttivita: {1}In servizio
@@ -40,6 +39,7 @@ eduPersonAffiliation: member
 eduPersonAffiliation: staff
 eduPersonAffiliation: employee
 loginShell: /bin/mosh
+iq: not so high
 cn: Francesco MALVEZZI
 unimoreDipRuolo: {1}Personale tecnico amministrativo
 unimoretelephonenumber: 39 059 2058018

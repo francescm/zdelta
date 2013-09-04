@@ -4,8 +4,9 @@ Progetto di delta in ruby con librerie ldap::ldif.
 
 == ldif_diff.rb ==
 
-Helper per rendere stampabili i Mod risultanti dal delta. Probebilmente si poteva usare:
+Helper per rendere stampabili i Mod risultanti dal delta. Probabilmente si poteva usare:
 LDAP::LDIF.mods_to_ldif( dn, *mods )
+(forse no, pero': https://github.com/alexey-chebotar/ruby-ldap/issues/26)
 
 == parser.rb ==
 

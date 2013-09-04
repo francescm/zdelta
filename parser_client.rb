@@ -3,6 +3,7 @@
 require 'ldap'
 require 'ldap/ldif'
 #require 'parser'
+require 'ldif'
 require 'rubygems'
 require 'ffi-rzmq'
 #require 'yaml'
@@ -23,8 +24,6 @@ start_time = Time.new
 
 receiver.send_string "#{identity} says: hallo master"
 
-entries = []
-
 def parse_ok(buffer)
   #  record = LDAP::LDIF.parse_entry(buffer)
   entry = Parser.parse(buffer).first
@@ -36,19 +35,45 @@ def parse_ok(buffer)
 end
 
 def parse(buffer)
+  data = Marshal.load(Marshal.dump(buffer)) # array deep copy
   record = LDAP::LDIF.parse_entry(buffer)
   if record
-    {record.dn => buffer}
+    {:dn => record.dn, :data => data}
   else
     nil
   end
 end
 
+def calculate_diff(buffer, entries)
+  new = LDAP::LDIF.parse_entry(buffer)
+  old = LDAP::LDIF.parse_entry(entries[new.dn])
+  new_ldif = Ldif.new(new.dn, new.attrs)
+  old_ldif = Ldif.new(old.dn, old.attrs)
+  diff = (old_ldif - new_ldif).to_ldif
+  diff
+end
 
+# qui ricevo la prima copia dei dati (OLD)
 parsed = 0
+entries = {}
 while true
   parsed += 1
 
+  buffer = ""
+  receiver.recv_string(buffer = "")
+  if buffer.eql? "__NEXT_STEP__"
+    break
+  end
+  buffer = buffer.split("\n")
+  buffer << "\n"
+  if entry = parse(buffer)
+    entries[entry[:dn]] = entry[:data]
+  end
+end
+
+# qui i dati di confronto
+while true
+  parsed += 1
   buffer = ""
   receiver.recv_string(buffer = "")
   if buffer.eql? "__SHUTDOWN__"
@@ -56,11 +81,12 @@ while true
   end
   buffer = buffer.split("\n")
   buffer << "\n"
-  if entry = parse(buffer)
-    entries << entry
-    forwarder.send_string entry.keys.first # e' il dn
+  diff = calculate_diff(buffer, entries)
+  if diff
+    forwarder.send_string diff
   end
 end
+
 
 forwarder.send_string "__END_OF_DATA__"
 

@@ -34,11 +34,17 @@ while continue
     puts  "received #{stop_signals} stop_signal(s)"
     continue = false if stop_signals >= ( CLIENTS )
   else
-    entries = entries << {buffer => sender}
+    entries = entries << buffer
 #    puts  "\nassembled #{entries.size} entries in #{parsed} chunk(s)"
   end
 end
 
 puts "stop signals received: #{stop_signals}; clients: #{CLIENTS}"
 puts "assembled #{entries.size} entries in #{Time.new - start_time}"
+puts
+
+entries.each do |diff|
+  puts diff
+  puts ""
+end
 
