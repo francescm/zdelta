@@ -43,8 +43,10 @@ puts "stop signals received: #{stop_signals}; clients: #{CLIENTS}"
 puts "assembled #{entries.size} entries in #{Time.new - start_time}"
 puts
 
-entries.each do |diff|
-  puts diff
-  puts ""
+File.open("output.ldif", "w+") do |f|
+  entries.each do |diff|
+    f.puts diff
+    f.puts ""
+  end
 end
 

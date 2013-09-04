@@ -7,18 +7,18 @@ task :conf do
   ENV['OLD_FILE'] = "bulk.ldif"
   ENV['NEW_FILE'] = "bulk_new.ldif"
 #  ENV['OLD_FILE'] = "registered.ldif"
-#  ENV['OLD_FILE'] = "users.ldif"
-#  ENV['NEW_FILE'] = "user.ldif"
+#  ENV['OLD_FILE'] = "user.ldif"
+#  ENV['NEW_FILE'] = "users.ldif"
   ENV['LOADER_SOCKET'] = "ipc://loader.ipc"
-  ENV['CATALOG_SOCKET'] = "ipc://assembler.ipc"
+  ENV['CATALOG_SOCKET'] = "ipc://emitter.ipc"
 end
 
 task :loader => :conf do
   sh %{ruby -I . file_loader.rb}
 end
 
-task :assembler => :conf do
-  sh %{ruby -I . chunk_assembler.rb}
+task :emitter => :conf do
+  sh %{ruby -I . emitter.rb}
 end
 
 
@@ -30,7 +30,7 @@ end
 
 def parser_list
   build_list = []
-  build_list << :assembler
+  build_list << :emitter
   build_list << :loader
   1.upto PARSERS do |i|
     build_list << "parser#{i}".to_sym

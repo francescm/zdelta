@@ -2,11 +2,9 @@
 
 require 'ldap'
 require 'ldap/ldif'
-#require 'parser'
 require 'ldif'
 require 'rubygems'
 require 'ffi-rzmq'
-#require 'yaml'
 
 context = ZMQ::Context.new(1)
 
@@ -24,18 +22,9 @@ start_time = Time.new
 
 receiver.send_string "#{identity} says: hallo master"
 
-def parse_ok(buffer)
-  #  record = LDAP::LDIF.parse_entry(buffer)
-  entry = Parser.parse(buffer).first
-  if entry
-    {entry["dn"].first => entry}
-  else
-    nil
-  end
-end
-
 def parse(buffer)
   data = Marshal.load(Marshal.dump(buffer)) # array deep copy
+#  TODO: LDAP::LDIF.parse_entry is way too slow for just extracting dn
   record = LDAP::LDIF.parse_entry(buffer)
   if record
     {:dn => record.dn, :data => data}
@@ -44,16 +33,28 @@ def parse(buffer)
   end
 end
 
-def calculate_diff(buffer, entries)
-  new = LDAP::LDIF.parse_entry(buffer)
-  old = LDAP::LDIF.parse_entry(entries[new.dn])
-  new_ldif = Ldif.new(new.dn, new.attrs)
-  old_ldif = Ldif.new(old.dn, old.attrs)
+def calc_diff(mode, buffer, entries = nil)
+  case mode
+  when :mod
+    new = LDAP::LDIF.parse_entry(buffer)
+    old = LDAP::LDIF.parse_entry(entries[new.dn])
+    new_ldif = Ldif.new(new.dn, new.attrs)
+    old_ldif = Ldif.new(old.dn, old.attrs)
+  when :del    
+    old = LDAP::LDIF.parse_entry(buffer)
+    old_ldif = Ldif.new(old.dn, old.attrs)
+    new_ldif = Ldif.new(old.dn, {})
+  when :add
+    new = LDAP::LDIF.parse_entry(buffer)
+    new_ldif = Ldif.new(new.dn, new.attrs)
+    old_ldif = Ldif.new(new.dn, {})
+  else raise RuntimeError, "mode #{mode} unknown"
+  end
   diff = (old_ldif - new_ldif).to_ldif
-  diff
+  {:diff => diff, :dn => new.respond_to?(:dn) ? new.dn : old.dn }
 end
 
-# qui ricevo la prima copia dei dati (OLD)
+# first receive old data
 parsed = 0
 entries = {}
 while true
@@ -71,7 +72,23 @@ while true
   end
 end
 
-# qui i dati di confronto
+# then receive matching new data
+while true
+  parsed += 1
+  buffer = ""
+  receiver.recv_string(buffer = "")
+  if buffer.eql? "__ADD_STEP__"
+    break
+  end
+  buffer = buffer.split("\n")
+  buffer << "\n"
+  res = calc_diff(:mod, buffer, entries)
+
+  entries.delete res[:dn]
+  forwarder.send_string res[:diff]
+end
+
+# now process add entries
 while true
   parsed += 1
   buffer = ""
@@ -81,12 +98,15 @@ while true
   end
   buffer = buffer.split("\n")
   buffer << "\n"
-  diff = calculate_diff(buffer, entries)
-  if diff
-    forwarder.send_string diff
-  end
+  res = calc_diff(:add, buffer)
+  forwarder.send_string res[:diff]
 end
 
+# and last delete entries
+entries.each do |dn, data|
+  res = calc_diff(:del, data)
+  forwarder.send_string res[:diff]
+end
 
 forwarder.send_string "__END_OF_DATA__"
 
