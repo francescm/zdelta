@@ -70,4 +70,15 @@ class LdifTester < Test::Unit::TestCase
 
   end
 
+  def test_case_insensitive_diff_is_a_replace
+    old = Ldif.new("uid=malvezzi,ou=people,dc=example,dc=org", {"gecos" => ["Francesco Malvezzi"]})
+    new = Ldif.new("uid=malvezzi,ou=people,dc=example,dc=org", {"gecos" => ["Francesco MALVEZZI"]})
+    diff = old - new
+    assert diff
+    diff.mods.each do |m|
+      assert_equal 2, m.mod_op
+    end
+
+  end
+
 end

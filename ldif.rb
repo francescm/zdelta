@@ -45,25 +45,48 @@ class Ldif
       end
 
       commons.each do |attr|
+        values_to_replace = []
         values_to_add = other.attrs[attr] - @attrs[attr]
         values_to_delete = @attrs[attr] - other.attrs[attr]
-        if attr.match /userpassword/i
-          unless values_to_add.empty?
-            res << LDAP::Mod.new(LDAP::LDAP_MOD_REPLACE, attr, values_to_add)
-          end
-        else
-          unless values_to_add.empty?
-            res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, values_to_add)
-          end
-          unless values_to_delete.empty?
-            res << LDAP::Mod.new(LDAP::LDAP_MOD_DELETE, attr, values_to_delete)
-          end
+# userPassword has to be REPLACED, no ADD/DELETE
+        if attr.match /userpassword/i and not values_to_add.empty?
+          values_to_replace = other.attrs[attr]
+          values_to_add.clear
+          values_to_delete.clear
+# according to the schema format, openldap refuses to ADD/DELETE an 
+#  attribute when the differences are only case difference
+# Insted a REPLACE works.
+        elsif not values_to_add.empty? and case_insensitive_array_compare(values_to_add, values_to_delete)
+          values_to_replace = other.attrs[attr]
+          values_to_add.clear
+          values_to_delete.clear
         end
 
+        unless values_to_replace.empty?
+          res << LDAP::Mod.new(LDAP::LDAP_MOD_REPLACE, attr, values_to_replace)
+        end
+        
+        unless values_to_add.empty?
+          res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, values_to_add)
+        end
+        unless values_to_delete.empty?
+          res << LDAP::Mod.new(LDAP::LDAP_MOD_DELETE, attr, values_to_delete)
+        end
       end
       LdifDiff.new(@dn, "modify", res)
     end
   end
 
+private
+  def case_insensitive_array_compare(vec1, vec2)
+    return false if vec1.size != vec2.size
+    vec1.each do |el|
+      return false unless vec2.detect {|other_el| other_el.upcase.eql? el.upcase }
+    end
+    vec2.each do |el|
+      return false unless vec1.detect {|other_el| other_el.upcase.eql? el.upcase }
+    end
+    true
+  end
 end
 

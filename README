@@ -1,0 +1,40 @@
+= zdelta =
+
+Compares two ldif file to find out diffs. Takes advantage of zeromq features to exploit the cpu power from each core.
+
+== How to execute ==
+
+Modify the ENV globals in rakefile.rb then:
+ time rake
+
+== How it works ==
+
+file_loader.rb splits file OLD (the one to be amended) in individual entries. Eache ntry is sent to a different parser_client.rb, file_loader.rb keeps memory which dn are sent to which clients.
+
+Then file_loader.rb read file NEW (the one with the current data), splits entries, and sends matching dn to parser_client.rb.
+
+The entries in NEW without a match in memory (that is: dn not included in OLD) are entry adds. Now file_loader.rb sends the entry add to parser_client.rb in turn.
+
+parser_client.rb executes four steps. Each step is signalled by a simple string message from file_loader.rb. For example: message "__NEXT_STEP__" warns parser_client.rb to begin executing diffs.
+
+The steps are:
+* collecting OLD data
+* collect NEW data + execute diff
+* add entries
+* delete entries
+
+The first three step are file_loader.rb-driven, but the last one is self lead. Each time NEW data matches OLD, dn is deleted from OLD. dn which survive (no NEW matches) are delete entry operation.
+
+== TODO ==
+
+emitter.rb writes to file output.ldif. That can be pushed to configuration. 
+
+parser_client.rb and emitter use a DEALER - ROUTER pattern but a PUSH PULL would be fine.
+
+Should use bundler to ease gem install.
+
+== CAVEATS ==
+
+Use ZeroMQ-2.2
+
+With 170k entries (328MB) ruby (2.0) take 1.50 sec to calculate delta. jruby (1.7.3) hangs.
