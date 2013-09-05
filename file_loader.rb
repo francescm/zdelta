@@ -1,12 +1,7 @@
 #encoding: utf-8
-#time ruby -J-Xmx2048m -I . loader.rb
 
-#require 'ldap'
-#require 'ldap/ldif'
-#require 'parser'
 require 'rubygems'
 require 'ffi-rzmq'
-#require 'yaml'
 
 OLD = ENV['OLD_FILE']
 NEW = ENV['NEW_FILE']
@@ -17,8 +12,7 @@ start_time = Time.new
 incremental = nil
 buffer = []
 
-memory = {} #contiene le coppie dn -> client cui sono stati spediti 
-            # i dati della entry
+memory = {} #holds the map dn -> client whom data has been send
 
 def get_dn(buffer)
   dn = buffer.detect{|attr| attr.match /^dn:/}.split(": ").last.chomp
@@ -59,7 +53,7 @@ context = ZMQ::Context.new(1)
 socket = context.socket(ZMQ::ROUTER)
 socket.bind ENV['LOADER_SOCKET']
 
-#aspetto che i client (DEALER) si presentino all'appello
+# wait for the clients (DEALER) to show themself
 
 still_missing = ENV['CLIENTS'].to_i
 client_addrs = []
@@ -71,10 +65,9 @@ while (still_missing != 0)
   still_missing = still_missing -1
 end
 
-#puts "clients: #{client_addrs.join(", ")}"
-#controllo che non ci siano degli indirizzi doppi:
+# check no two clients share the same address
 client_addrs.inject [] do |prev, el| 
-  raise RuntimeError, "#{el} compare due volte" if prev.include? el
+  raise RuntimeError, "#{el} shows twice" if prev.include? el
   prev << el
 end
 
