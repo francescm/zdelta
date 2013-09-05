@@ -32,4 +32,10 @@ class LdifDiffTester < Test::Unit::TestCase
 #    puts ldif_diff.to_ldif
   end
 
+  def test_change_userpassword_with_replace
+    change_pwd = LDAP::Mod.new(LDAP::LDAP_MOD_REPLACE, "userPassword" , ["{CLEAR}password"])
+    ldif_diff = LdifDiff.new("uid=test", "modify", [ change_pwd ])
+    assert_match /^replace: userpassword/i,  ldif_diff.to_ldif
+    
+  end
 end

@@ -39,6 +39,8 @@ class LdifDiff
         res += print_chunk("add", mod, is_last)
       elsif mod.mod_op.eql? LDAP::LDAP_MOD_DELETE
         res += print_chunk("delete", mod, is_last)
+      elsif mod.mod_op.eql? LDAP::LDAP_MOD_REPLACE
+        res += print_chunk("replace", mod, is_last)
       else raise RuntimeError, "type sconosciuto: #{mod.mod_op}"
       end
     end

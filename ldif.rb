@@ -33,7 +33,11 @@ class Ldif
       res = []
 
       to_add.each do |attr|
-        res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, other.attrs[attr])
+        if attr.match /userpassword/i
+          res << LDAP::Mod.new(LDAP::LDAP_MOD_REPLACE, attr, other.attrs[attr])
+        else
+          res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, other.attrs[attr])
+        end
       end
 
       to_delete.each do |attr|
@@ -43,11 +47,17 @@ class Ldif
       commons.each do |attr|
         values_to_add = other.attrs[attr] - @attrs[attr]
         values_to_delete = @attrs[attr] - other.attrs[attr]
-        unless values_to_add.empty?
-          res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, values_to_add)
-        end
-        unless values_to_delete.empty?
-          res << LDAP::Mod.new(LDAP::LDAP_MOD_DELETE, attr, values_to_delete)
+        if attr.match /userpassword/i
+          unless values_to_add.empty?
+            res << LDAP::Mod.new(LDAP::LDAP_MOD_REPLACE, attr, values_to_add)
+          end
+        else
+          unless values_to_add.empty?
+            res << LDAP::Mod.new(LDAP::LDAP_MOD_ADD, attr, values_to_add)
+          end
+          unless values_to_delete.empty?
+            res << LDAP::Mod.new(LDAP::LDAP_MOD_DELETE, attr, values_to_delete)
+          end
         end
 
       end

@@ -1,4 +1,4 @@
-= LDIF =
+= zdelta =
 
 Progetto di delta in ruby con librerie ldap::ldif.
 

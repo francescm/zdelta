@@ -34,7 +34,7 @@ class LdifTester < Test::Unit::TestCase
 
   def test_add_entry
 #se il old e' empty, e' una add
-    old = Ldif.new("uid=malvezzi,ou=people,dc=unimore,dc=it", {})
+    old = Ldif.new("uid=malvezzi,ou=people,dc=example,dc=org", {})
     diff = old - @new
     assert diff
     assert_equal "changetype: add", diff.to_ldif.split("\n")[1]
@@ -42,7 +42,7 @@ class LdifTester < Test::Unit::TestCase
 
   def test_delete_entry
 #se il new e' empty, e' una delete
-    new = Ldif.new("uid=malvezzi,ou=people,dc=unimore,dc=it", {})
+    new = Ldif.new("uid=malvezzi,ou=people,dc=example,dc=org", {})
     diff = @old - new
     assert diff
     assert_equal 2, diff.to_ldif.split("\n").size
@@ -57,8 +57,17 @@ class LdifTester < Test::Unit::TestCase
     assert diff
     assert_equal 1, diff.to_ldif.split("\n").size
     assert_match /^#/, diff.to_ldif.split("\n").first
-
   end
 
+  def test_user_password_creates_a_replace
+    old = Ldif.new("uid=malvezzi,ou=people,dc=example,dc=org", {"userPassword" => ["{crypt}secret"]})
+    new = Ldif.new("uid=malvezzi,ou=people,dc=example,dc=org", {"userPassword" => ["{crypt}password"]})
+    diff = old - new
+    assert diff
+    diff.mods.each do |m|
+      assert_equal 2, m.mod_op
+    end
+
+  end
 
 end
