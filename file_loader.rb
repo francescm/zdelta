@@ -137,4 +137,6 @@ client_addrs.each do |client|
   shutdown(socket, client)
 end
 
+socket.close
+
 #puts "new_entries: #{new_entries.keys.join(", ")}"

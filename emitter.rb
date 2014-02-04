@@ -50,3 +50,4 @@ File.open("output.ldif", "w+") do |f|
   end
 end
 
+receiver.close
