@@ -78,7 +78,17 @@ class LdifTester < Test::Unit::TestCase
     diff.mods.each do |m|
       assert_equal 2, m.mod_op
     end
+  end
 
+  def test_ruby_and_clojure
+    new_ldif = LDAP::LDIF.parse_file("rubydott.ldif", false).first
+    new = Ldif.new(new_ldif.dn, new_ldif.attrs)
+
+    old_ldif = LDAP::LDIF.parse_file("cljdott.ldif", false).first
+    old = Ldif.new(old_ldif.dn, old_ldif.attrs)
+    diff = old - new
+    assert diff
+    p diff
   end
 
 end

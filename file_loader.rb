@@ -15,7 +15,13 @@ buffer = []
 memory = {} #holds the map dn -> client whom data has been send
 
 def get_dn(buffer)
-  dn = buffer.detect{|attr| attr.match /^dn:/}.split(": ").last.chomp
+  begin
+    dn = buffer.detect{|attr| attr.match /^dn:/}.split(": ").last.chomp
+  rescue
+    puts "Missing dn in: "
+    puts buffer
+    exit 0
+  end
 end
 
 def process(socket, buffer, client)
