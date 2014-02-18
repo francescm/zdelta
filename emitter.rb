@@ -7,15 +7,29 @@ require 'rubygems'
 require 'ffi-rzmq'
 require 'yaml'
 
+def error_check(rc)
+  if ZMQ::Util.resultcode_ok?(rc)
+    false
+  else
+    STDERR.puts "Operation failed, errno [#{ZMQ::Util.errno}] description [#{ZMQ::Util.error_string}]"
+    caller(1).each { |callstack| STDERR.puts("pull: #{callstack}") }
+    true
+  end
+end
+
+
 context = ZMQ::Context.new(1)
 
 receiver = context.socket(ZMQ::ROUTER)
-receiver.bind ENV['CATALOG_SOCKET']
+rc = receiver.bind ENV['CATALOG_SOCKET']
+error_check rc
 
 start_time = Time.new
 
 CLIENTS = ENV['CLIENTS'].to_i
 stop_signals = 0
+
+
 
 config = YAML.load_file("config.yaml")
 output_file = config[:output_file]
@@ -27,9 +41,10 @@ continue = true
 while continue
   parsed += 1
 
-  receiver.recv_string(sender = "")
-
-  receiver.recv_string(buffer = "")
+  rc = receiver.recv_string(sender = "")
+  break if error_check rc
+  rc = receiver.recv_string(buffer = "")
+  break if error_check rc
 
   if buffer.eql? "__END_OF_DATA__"
   then
