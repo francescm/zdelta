@@ -1,7 +1,7 @@
 #encoding: utf-8
 
-require 'ldap'
-require 'ldap/ldif'
+#require 'ldap'
+#require 'ldap/ldif'
 require 'parser'
 require 'rubygems'
 require 'ffi-rzmq'
@@ -20,7 +20,7 @@ end
 
 context = ZMQ::Context.new(1)
 
-receiver = context.socket(ZMQ::ROUTER)
+receiver = context.socket(ZMQ::PULL)
 rc = receiver.bind ENV['CATALOG_SOCKET']
 error_check rc
 
@@ -41,8 +41,6 @@ continue = true
 while continue
   parsed += 1
 
-  rc = receiver.recv_string(sender = "")
-  break if error_check rc
   rc = receiver.recv_string(buffer = "")
   break if error_check rc
 
