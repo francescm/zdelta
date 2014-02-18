@@ -9,7 +9,7 @@ Modify the ENV globals in rakefile.rb then:
 
 == How it works ==
 
-file_loader.rb splits file OLD (the one to be amended) in individual entries. Eache ntry is sent to a different parser_client.rb, file_loader.rb keeps memory which dn are sent to which clients.
+file_loader.rb splits file OLD (the one to be amended) in individual entries. Eache entry is sent to a different parser_client.rb, file_loader.rb keeps memory which dn are sent to which clients.
 
 Then file_loader.rb read file NEW (the one with the current data), splits entries, and sends matching dn to parser_client.rb.
 
@@ -31,10 +31,8 @@ emitter.rb writes to file output.ldif. That can be pushed to configuration.
 
 parser_client.rb and emitter use a DEALER - ROUTER pattern but a PUSH PULL would be fine.
 
-Should use bundler to ease gem install.
-
 == CAVEATS ==
 
-Use ZeroMQ-2.2
+Tested with ZeroMQ-4.0.3
 
 With 170k entries (328MB) ruby (2.0) take 1.50 sec to calculate delta. jruby (1.7.3) hangs.

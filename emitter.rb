@@ -17,6 +17,9 @@ start_time = Time.new
 CLIENTS = ENV['CLIENTS'].to_i
 stop_signals = 0
 
+config = YAML.load_file("config.yaml")
+output_file = config[:output_file]
+
 entries = []
 parsed = 0
 continue = true
@@ -43,7 +46,7 @@ puts "stop signals received: #{stop_signals}; clients: #{CLIENTS}"
 puts "assembled #{entries.size} entries in #{Time.new - start_time}"
 puts
 
-File.open("output.ldif", "w+") do |f|
+File.open(output_file, "w+") do |f|
   entries.each do |diff|
     f.puts diff
     f.puts ""
