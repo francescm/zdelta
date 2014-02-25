@@ -1,6 +1,8 @@
 #encoding: utf-8
 
 require 'rubygems'
+require 'ldap'
+require 'ldap/ldif'
 require 'ffi-rzmq'
 
 OLD = ENV['OLD_FILE']
@@ -102,8 +104,9 @@ end
 new_entries = {}
 
 File.open(NEW).each_line do |l|
-  buffer << l
+
   if "\n".eql? l
+    buffer << l
     dn = get_dn(buffer)
 
     if client = memory[dn] 
@@ -120,7 +123,16 @@ File.open(NEW).each_line do |l|
       new_entries[dn] = Marshal.load(Marshal.dump(buffer)) # array deep copy
     end
     buffer.clear
+  else
+    line = unless l.ascii_only?
+             attr_name, attr_value = l.split(": ")
+             "#{attr_name}:: #{LDAP::LDIF.send(:base64_encode, attr_value)}"
+           else
+             l
+           end
+    buffer << line
   end
+
 end
 
 client_addrs.each do |client|

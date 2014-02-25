@@ -10,6 +10,7 @@ GEM
     ruby-ldap (0.9.16)
 
 PLATFORMS
+  java
   ruby
 
 DEPENDENCIES

@@ -24,30 +24,52 @@ receiver.send_string "#{identity} says: hallo master"
 
 def parse(buffer)
   data = Marshal.load(Marshal.dump(buffer)) # array deep copy
-#  TODO: LDAP::LDIF.parse_entry is way too slow for just extracting dn
-  record = LDAP::LDIF.parse_entry(buffer)
-  if record
-    {:dn => record.dn, :data => data}
+  dn = data.first.split(": ").last
+  if dn.match /uid=.*,ou=people,dc=unimore,dc=it/
+    {:dn => dn, :data => data}
   else
-    nil
+    raise RuntimeError, "wrong dn format: #{dn}"
   end
 end
 
 def calc_diff(mode, buffer, entries = nil)
   case mode
   when :mod
-    new = LDAP::LDIF.parse_entry(buffer)
-    old = LDAP::LDIF.parse_entry(entries[new.dn])
-    new_ldif = Ldif.new(new.dn, new.attrs)
-    old_ldif = Ldif.new(old.dn, old.attrs)
-  when :del    
-    old = LDAP::LDIF.parse_entry(buffer)
-    old_ldif = Ldif.new(old.dn, old.attrs)
-    new_ldif = Ldif.new(old.dn, {})
+    begin
+      new = LDAP::LDIF.parse_entry(buffer)
+      old = LDAP::LDIF.parse_entry(entries[new.dn])
+      new_ldif = Ldif.new(new.dn, new.attrs)
+      old_ldif = Ldif.new(old.dn, old.attrs)
+    rescue Exception => e
+      puts "eccezione (mod): #{e.to_s}"
+      puts "buffer: #{buffer}"
+      puts "dn: #{new.dn}"
+      puts "old: #{old_ldif}"
+      puts "new: #{new_ldif}"
+    end
+
+  when :del
+    begin
+      old = LDAP::LDIF.parse_entry(buffer)
+      old_ldif = Ldif.new(old.dn, old.attrs)
+      new_ldif = Ldif.new(old.dn, {})
+    rescue Exception => e
+      puts "eccezione (del): #{e.to_s}"
+      puts "dn: #{old.dn}"
+      puts "old: #{old_ldif}"
+    end
+      
   when :add
-    new = LDAP::LDIF.parse_entry(buffer)
-    new_ldif = Ldif.new(new.dn, new.attrs)
-    old_ldif = Ldif.new(new.dn, {})
+    begin
+      new = LDAP::LDIF.parse_entry(buffer)
+      new_ldif = Ldif.new(new.dn, new.attrs)
+      old_ldif = Ldif.new(new.dn, {})
+    rescue Exception => e
+      puts "eccezione (add): #{e.to_s}"
+      puts "dn: #{new.dn}"
+      puts "new: #{new_ldif}"
+    end
+
   else raise RuntimeError, "mode #{mode} unknown"
   end
   diff = (old_ldif - new_ldif).to_ldif
@@ -67,9 +89,9 @@ while true
   end
   buffer = buffer.split("\n")
   buffer << "\n"
-  if entry = parse(buffer)
-    entries[entry[:dn]] = entry[:data]
-  end
+
+  entry = parse(buffer)
+  entries[entry[:dn]] = entry[:data]
 end
 
 # then receive matching new data
