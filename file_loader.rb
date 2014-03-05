@@ -4,6 +4,7 @@ require 'rubygems'
 require 'ldap'
 require 'ldap/ldif'
 require 'ffi-rzmq'
+require 'json'
 
 OLD = ENV['OLD_FILE']
 NEW = ENV['NEW_FILE']
@@ -27,15 +28,14 @@ def get_dn(buffer)
 end
 
 def process(socket, buffer, client)
-  socket.send_string client, ZMQ::SNDMORE
-  socket.send_string(buffer.join)
+  send_data(socket, buffer, client)
   dn = get_dn(buffer)
   dn
 end
 
 def send_data(socket, buffer, client)
   socket.send_string client, ZMQ::SNDMORE
-  socket.send_string(buffer.join)
+  socket.send_string(JSON.generate(buffer))
   true
 end
 
@@ -80,9 +80,8 @@ client_addrs.inject [] do |prev, el|
 end
 
 File.open(OLD).each_line do |l|
-  buffer << l
   if "\n".eql? l
-    client = client_addrs[ progress % 8 ]
+    client = client_addrs[ progress % CLIENTS ]
     dn = process(socket, buffer, client)
     memory[dn] = client
     progress = progress + 1
@@ -94,6 +93,8 @@ File.open(OLD).each_line do |l|
       incremental = new_time
     end
     buffer.clear
+  else
+    buffer << l
   end
 end
 
@@ -106,7 +107,6 @@ new_entries = {}
 File.open(NEW).each_line do |l|
 
   if "\n".eql? l
-    buffer << l
     dn = get_dn(buffer)
 
     if client = memory[dn] 
@@ -124,13 +124,7 @@ File.open(NEW).each_line do |l|
     end
     buffer.clear
   else
-    line = unless l.ascii_only?
-             attr_name, attr_value = l.split(": ")
-             "#{attr_name}:: #{LDAP::LDIF.send(:base64_encode, attr_value)}"
-           else
-             l
-           end
-    buffer << line
+    buffer << l
   end
 
 end
@@ -140,7 +134,7 @@ client_addrs.each do |client|
 end
 
 new_entries.each do |dn, data|
-  client = client_addrs[ progress % 8 ]
+  client = client_addrs[ progress % CLIENTS ]
   progress = progress + 1
   send_data(socket, data, client)
 end

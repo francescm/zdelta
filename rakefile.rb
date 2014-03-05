@@ -6,6 +6,9 @@ task :conf do
   ENV['CLIENTS'] = PARSERS.to_s
   ENV['OLD_FILE'] = "live.ldif"
   ENV['NEW_FILE'] = "single.ldif"
+#  ENV['OLD_FILE'] = "ruggiero-live.ldif"
+#  ENV['NEW_FILE'] = "ruggiero.ldif"
+
   ENV['LOADER_SOCKET'] = "ipc://loader.ipc"
   ENV['CATALOG_SOCKET'] = "ipc://emitter.ipc"
 end
