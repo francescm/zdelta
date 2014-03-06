@@ -5,6 +5,7 @@ require 'ldap'
 require 'ldap/ldif'
 require 'ffi-rzmq'
 require 'json'
+require 'logger'
 
 OLD = ENV['OLD_FILE']
 NEW = ENV['NEW_FILE']
@@ -16,6 +17,17 @@ incremental = nil
 buffer = []
 
 memory = {} #holds the map dn -> client whom data has been send
+
+def error_check(rc)
+  if ZMQ::Util.resultcode_ok?(rc)
+    false
+  else
+    $own_logger.info "Operation failed, errno [#{ZMQ::Util.errno}] description [#{ZMQ::Util.error_string}]"
+    caller(1).each { |callstack| @own_logger.info callstack }
+    true
+  end
+end
+
 
 def get_dn(buffer)
   begin
@@ -36,6 +48,7 @@ end
 def send_data(socket, buffer, client)
   socket.send_string client, ZMQ::SNDMORE
   socket.send_string(JSON.generate(buffer))
+#  ($loggers[client]).debug buffer.first
   true
 end
 
@@ -52,26 +65,45 @@ def next_step(socket, client)
 end
 
 def add_step(socket, client)
-  socket.send_string client, ZMQ::SNDMORE
-  socket.send_string("__ADD_STEP__")
+  puts "sending add step to #{client}"
+  rc = socket.send_string client, ZMQ::SNDMORE
+  error_check rc
+  rc = socket.send_string("__ADD_STEP__")
+  error_check rc
   true
 end
 
+
+client_addrs = []
+$loggers = {}
+
+
+def wait_all(socket)
+  still_missing = CLIENTS
+  while (still_missing != 0)
+    socket.recv_string(client = "")
+    socket.recv_string(msg = "")
+    yield client
+    still_missing = still_missing -1
+  end
+end
+
+
 context = ZMQ::Context.new(1)
 socket = context.socket(ZMQ::ROUTER)
+socket.setsockopt(ZMQ::SNDHWM, 10000)
 socket.bind ENV['LOADER_SOCKET']
 
 # wait for the clients (DEALER) to show themself
 
-still_missing = ENV['CLIENTS'].to_i
-client_addrs = []
-
-while (still_missing != 0)
-  socket.recv_string(client = "")
-  socket.recv_string(msg = "")
+wait_all(socket) do |client| 
   client_addrs << client
-  still_missing = still_missing -1
+  file = File.open("./logs/#{client}.log", File::WRONLY | File::APPEND)
+  $loggers[client] = Logger.new(file)
+  ($loggers[client]).sev_threshold = Logger::DEBUG
+  ($loggers[client]).progname = "file_loader"
 end
+
 
 # check no two clients share the same address
 client_addrs.inject [] do |prev, el| 
@@ -98,8 +130,14 @@ File.open(OLD).each_line do |l|
   end
 end
 
+
+
 client_addrs.each do |client|
   next_step(socket, client)
+end
+
+wait_all(socket) do |client| 
+  puts "client #{client} ready for next step"
 end
 
 new_entries = {}
@@ -133,6 +171,11 @@ client_addrs.each do |client|
   add_step(socket, client)
 end
 
+wait_all(socket) do |client| 
+  puts "client #{client} ready for add step"
+end
+
+
 new_entries.each do |dn, data|
   client = client_addrs[ progress % CLIENTS ]
   progress = progress + 1
@@ -143,6 +186,18 @@ client_addrs.each do |client|
   shutdown(socket, client)
 end
 
+
+goodbyes = []
+goodbyes_missing = 8
+while (goodbyes_missing != 0)
+  socket.recv_string(client = "")
+  socket.recv_string(msg = "")
+  p client
+  goodbyes << client
+  goodbyes_missing = goodbyes_missing -1
+end
+
+p goodbyes
 socket.close
 
 #puts "new_entries: #{new_entries.keys.join(", ")}"

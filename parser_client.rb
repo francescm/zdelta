@@ -11,10 +11,27 @@ require 'logger'
 context = ZMQ::Context.new(1)
 
 identity = "parser-#{(0..10).to_a.map {(65 + rand(21)).chr}.join}"
+
 logger = Logger.new("logs/parser_client.log")
 logger.progname = identity
 logger.sev_threshold = Logger::DEBUG
 logger.debug("hallo")
+
+$own_logger = Logger.new("logs/#{identity}.log")
+$own_logger.sev_threshold = Logger::DEBUG
+$own_logger.debug("hallo")
+
+def error_check(rc)
+  if ZMQ::Util.resultcode_ok?(rc)
+    false
+  else
+    $own_logger.info "Operation failed, errno [#{ZMQ::Util.errno}] description [#{ZMQ::Util.error_string}]"
+    caller(1).each { |callstack| @own_logger.info callstack }
+    true
+  end
+end
+
+
 
 receiver = context.socket(ZMQ::DEALER)
 receiver.setsockopt(ZMQ::IDENTITY, identity)
@@ -25,6 +42,8 @@ forwarder.setsockopt(ZMQ::IDENTITY, identity)
 forwarder.connect ENV['CATALOG_SOCKET']
 
 start_time = Time.new
+
+$step = "start"
 
 receiver.send_string "#{identity} says: hallo master"
 
@@ -66,6 +85,10 @@ def calc_diff(mode, buffer, other_data = nil)
   else raise RuntimeError, "mode #{mode} unknown"
   end
   diff = (old_ldif - new_ldif).to_ldif
+#  if %w{next_step add_step delete_step}.include? $step
+#    $own_logger.debug $step 
+#    $own_logger.debug diff
+#  end
   {:diff => diff, :dn => new.respond_to?(:dn) ? new.dn : old.dn }
 end
 
@@ -75,10 +98,11 @@ entries = {}
 while true
   
 #  parsed += 1
+  rc = receiver.recv_string(json_buffer = "")
+  ZMQ::Util.resultcode_ok? rc
 
-  buffer = ""
-  receiver.recv_string(json_buffer = "")
   if json_buffer.strip.eql? "__NEXT_STEP__"
+    $step = "next_step"
     logger.debug json_buffer
     break
   end
@@ -89,39 +113,60 @@ while true
   entries[entry[:dn]] = entry[:data]
 end
 
+logger.info "next step ready"
+receiver.send_string "#{identity} says: next step ready"
+
 # then receive matching new data
 while true
   parsed += 1
   buffer = ""
-  receiver.recv_string(json_buffer = "")
+  rc = receiver.recv_string(json_buffer = "")
+  ZMQ::Util.resultcode_ok? rc
 
   if json_buffer.strip.eql? "__ADD_STEP__"
+    $step = "add_step"
     logger.debug json_buffer
     break
   end
+
   buffer = read_buffer json_buffer
+  $own_logger.debug buffer
   dn = buffer.detect{|attr| attr.match /^dn:/}.split(": ").last.chomp
+  $own_logger.debug("ns: #{dn}")
   res = calc_diff(:mod, buffer, entries[dn])
   raise RuntimeError, "strange dn mismatch: #{dn} <> #{res[:dn]}" unless res[:dn].eql? dn
+  $own_logger.debug("ns: #{res[:diff]}")
+  raise RuntimeError, "missing dn #{res[:dn]} in entries" unless entries[res[:dn]]
   entries.delete res[:dn]
-  forwarder.send_string res[:diff]
+  rc = forwarder.send_string res[:diff]
+  ZMQ::Util.resultcode_ok? rc
 end
+
+logger.info "add step ready"
+$own_logger.info "add step ready"
+receiver.send_string "#{identity} says: add step ready"
 
 # now process add entries
 while true
 
   parsed += 1
   buffer = ""
-  receiver.recv_string(json_buffer = "")
+
+  rc = receiver.recv_string(json_buffer = "")
+  ZMQ::Util.resultcode_ok? rc
+
   if json_buffer.strip.eql? "__SHUTDOWN__"
     logger.debug json_buffer
     break
   end
+  $own_logger.debug("as: #{buffer}")
   buffer = read_buffer json_buffer
 
   res = calc_diff(:add, buffer)
   forwarder.send_string res[:diff]
 end
+
+$step = "delete_step"
 
 # and last delete entries
 parsed += entries.size
@@ -132,4 +177,7 @@ entries.each do |dn, data|
 end
 logger.info "parsed: #{parsed} entries"
 forwarder.send_string "__END_OF_DATA__"
+
+rc = receiver.send_string "#{identity} says: goodbye master"
+ZMQ::Util.resultcode_ok? rc
 
