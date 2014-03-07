@@ -47,7 +47,7 @@ while continue
   if buffer.eql? "__END_OF_DATA__"
   then
     stop_signals += 1 
-    puts  "received #{stop_signals} stop_signal(s)"
+    puts  "received #{stop_signals} stop_signal(s)" if $DEBUG
     continue = false if stop_signals >= ( CLIENTS )
   else
     entries = entries << buffer

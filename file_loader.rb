@@ -22,8 +22,8 @@ def error_check(rc)
   if ZMQ::Util.resultcode_ok?(rc)
     false
   else
-    $own_logger.info "Operation failed, errno [#{ZMQ::Util.errno}] description [#{ZMQ::Util.error_string}]"
-    caller(1).each { |callstack| @own_logger.info callstack }
+    puts "Operation failed, errno [#{ZMQ::Util.errno}] description [#{ZMQ::Util.error_string}]"
+    caller(1).each { |callstack| puts callstack }
     true
   end
 end
@@ -48,31 +48,26 @@ end
 def send_data(socket, buffer, client)
   socket.send_string client, ZMQ::SNDMORE
   socket.send_string(JSON.generate(buffer))
-#  ($loggers[client]).debug buffer.first
   true
 end
 
 def shutdown(socket, client)
-  socket.send_string client, ZMQ::SNDMORE
-  socket.send_string("__SHUTDOWN__")
-  true
+  deal_message(socket, client, "__SHUTDOWN__")
 end
 
 def next_step(socket, client)
-  socket.send_string client, ZMQ::SNDMORE
-  socket.send_string("__NEXT_STEP__")
-  true
+  deal_message(socket, client, "__NEXT_STEP__")
 end
 
 def add_step(socket, client)
-  puts "sending add step to #{client}"
-  rc = socket.send_string client, ZMQ::SNDMORE
-  error_check rc
-  rc = socket.send_string("__ADD_STEP__")
-  error_check rc
-  true
+  deal_message(socket, client, "__ADD_STEP__")
 end
 
+def deal_message(socket, client, message)
+  socket.send_string client, ZMQ::SNDMORE
+  socket.send_string message
+  true  
+end
 
 client_addrs = []
 $loggers = {}
@@ -98,10 +93,6 @@ socket.bind ENV['LOADER_SOCKET']
 
 wait_all(socket) do |client| 
   client_addrs << client
-  file = File.open("./logs/#{client}.log", File::WRONLY | File::APPEND)
-  $loggers[client] = Logger.new(file)
-  ($loggers[client]).sev_threshold = Logger::DEBUG
-  ($loggers[client]).progname = "file_loader"
 end
 
 
@@ -137,7 +128,7 @@ client_addrs.each do |client|
 end
 
 wait_all(socket) do |client| 
-  puts "client #{client} ready for next step"
+  puts "client #{client} ready for next step" if $DEBUG
 end
 
 new_entries = {}
@@ -172,7 +163,7 @@ client_addrs.each do |client|
 end
 
 wait_all(socket) do |client| 
-  puts "client #{client} ready for add step"
+  puts "client #{client} ready for add step" if $DEBUG
 end
 
 
@@ -192,12 +183,9 @@ goodbyes_missing = 8
 while (goodbyes_missing != 0)
   socket.recv_string(client = "")
   socket.recv_string(msg = "")
-  p client
   goodbyes << client
   goodbyes_missing = goodbyes_missing -1
 end
 
-p goodbyes
 socket.close
 
-#puts "new_entries: #{new_entries.keys.join(", ")}"
