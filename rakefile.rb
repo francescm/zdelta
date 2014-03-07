@@ -1,30 +1,30 @@
+#encoding: utf-8
+
+require 'yaml'
+
 task :default => [:parse]
 
-PARSERS = 8
 
-task :conf do
-  ENV['CLIENTS'] = PARSERS.to_s
-  ENV['OLD_FILE'] = "live.ldif"
-  ENV['NEW_FILE'] = "single.ldif"
-#  ENV['OLD_FILE'] = "ruggiero-live.ldif"
-#  ENV['NEW_FILE'] = "ruggiero.ldif"
-
-  ENV['LOADER_SOCKET'] = "ipc://loader.ipc"
-  ENV['CATALOG_SOCKET'] = "ipc://emitter.ipc"
+task :loader do
+  verbose(false) do
+    sh %{ruby -I . file_loader.rb}
+  end
 end
 
-task :loader => :conf do
-  sh %{ruby -I . file_loader.rb}
+task :emitter do
+  verbose(false) do
+    sh %{ruby -I . emitter.rb}
+  end
 end
 
-task :emitter => :conf do
-  sh %{ruby -I . emitter.rb}
-end
-
+config = YAML.load_file("config.yaml")
+PARSERS = config[:clients].to_i
 
 1.upto PARSERS do |i|
-  task "parser#{i}".to_sym => :conf do
-    sh %{ruby -I . parser_client.rb}
+  task "parser#{i}".to_sym do
+    verbose(false) do
+      sh %{ruby -I . parser_client.rb}
+    end
   end
 end
 

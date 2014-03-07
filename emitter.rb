@@ -1,7 +1,5 @@
 #encoding: utf-8
 
-#require 'ldap'
-#require 'ldap/ldif'
 require 'parser'
 require 'rubygems'
 require 'ffi-rzmq'
