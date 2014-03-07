@@ -4,7 +4,7 @@ Compares two ldif file to find out diffs. Takes advantage of zeromq features to 
 
 == How to execute ==
 
-Modify the ENV globals in rakefile.rb then:
+Modify the config.yaml then:
  time rake
 
 == How it works ==
