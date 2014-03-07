@@ -166,7 +166,6 @@ wait_all(socket) do |client|
   puts "client #{client} ready for add step" if $DEBUG
 end
 
-
 new_entries.each do |dn, data|
   client = client_addrs[ progress % CLIENTS ]
   progress = progress + 1
@@ -177,15 +176,9 @@ client_addrs.each do |client|
   shutdown(socket, client)
 end
 
-
-goodbyes = []
-goodbyes_missing = 8
-while (goodbyes_missing != 0)
-  socket.recv_string(client = "")
-  socket.recv_string(msg = "")
-  goodbyes << client
-  goodbyes_missing = goodbyes_missing -1
+#goobye messages
+wait_all(socket) do |client| 
+  puts "client #{client} said goodbye" if $DEBUG
 end
 
 socket.close
-
