@@ -7,6 +7,11 @@ require 'rubygems'
 require 'ffi-rzmq'
 require 'json'
 require 'logger'
+require 'yaml'
+
+config = YAML.load_file("config.yaml")
+catalog_socket = config[:catalog_socket]
+loader_socket = config[:loader_socket]
 
 context = ZMQ::Context.new(1)
 
@@ -14,11 +19,11 @@ identity = "parser-#{(0..10).to_a.map {(65 + rand(21)).chr}.join}"
 
 logger = Logger.new("logs/parser_client.log")
 logger.progname = identity
-logger.sev_threshold = Logger::DEBUG
+logger.sev_threshold = Logger::INFO
 logger.debug("hallo")
 
 $own_logger = Logger.new("logs/#{identity}.log")
-$own_logger.sev_threshold = Logger::DEBUG
+$own_logger.sev_threshold = Logger::INFO
 $own_logger.debug("hallo")
 
 def error_check(rc)
@@ -35,11 +40,11 @@ end
 
 receiver = context.socket(ZMQ::DEALER)
 receiver.setsockopt(ZMQ::IDENTITY, identity)
-receiver.connect ENV['LOADER_SOCKET']
+receiver.connect loader_socket
 
 forwarder = context.socket(ZMQ::PUSH)
 forwarder.setsockopt(ZMQ::IDENTITY, identity)
-forwarder.connect ENV['CATALOG_SOCKET']
+forwarder.connect catalog_socket
 
 start_time = Time.new
 

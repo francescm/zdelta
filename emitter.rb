@@ -17,22 +17,21 @@ def error_check(rc)
   end
 end
 
+config = YAML.load_file("config.yaml")
+output_file = config[:output_file]
+catalog_socket = config[:catalog_socket]
+CLIENTS = config[:clients].to_i
 
 context = ZMQ::Context.new(1)
 
 receiver = context.socket(ZMQ::PULL)
-rc = receiver.bind ENV['CATALOG_SOCKET']
+rc = receiver.bind catalog_socket
 error_check rc
 
 start_time = Time.new
 
-CLIENTS = ENV['CLIENTS'].to_i
+
 stop_signals = 0
-
-
-
-config = YAML.load_file("config.yaml")
-output_file = config[:output_file]
 
 entries = []
 parsed = 0

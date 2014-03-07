@@ -9,9 +9,11 @@ require 'logger'
 require 'yaml'
 
 config = YAML.load_file("config.yaml")
-OLD = config[:old]
-NEW = config[:new]
+old_file = config[:old]
+new_file = config[:new]
 CLIENTS = config[:clients].to_i
+hwm = config[:hwm]
+loader_socket = config[:loader_socket]
 
 progress = 0
 start_time = Time.new
@@ -88,8 +90,8 @@ end
 
 context = ZMQ::Context.new(1)
 socket = context.socket(ZMQ::ROUTER)
-socket.setsockopt(ZMQ::SNDHWM, 10000)
-socket.bind ENV['LOADER_SOCKET']
+socket.setsockopt(ZMQ::SNDHWM, hwm)
+socket.bind loader_socket
 
 # wait for the clients (DEALER) to show themself
 
@@ -104,7 +106,7 @@ client_addrs.inject [] do |prev, el|
   prev << el
 end
 
-File.open(OLD).each_line do |l|
+File.open(old_file).each_line do |l|
   if "\n".eql? l
     client = client_addrs[ progress % CLIENTS ]
     dn = process(socket, buffer, client)
@@ -135,7 +137,7 @@ end
 
 new_entries = {}
 
-File.open(NEW).each_line do |l|
+File.open(new_file).each_line do |l|
 
   if "\n".eql? l
     dn = get_dn(buffer)
