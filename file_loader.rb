@@ -6,10 +6,12 @@ require 'ldap/ldif'
 require 'ffi-rzmq'
 require 'json'
 require 'logger'
+require 'yaml'
 
-OLD = ENV['OLD_FILE']
-NEW = ENV['NEW_FILE']
-CLIENTS = ENV['CLIENTS'].to_i
+config = YAML.load_file("config.yaml")
+OLD = config[:old]
+NEW = config[:new]
+CLIENTS = config[:clients].to_i
 
 progress = 0
 start_time = Time.new
