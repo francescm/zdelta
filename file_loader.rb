@@ -35,7 +35,14 @@ end
 
 def get_dn(buffer)
   begin
-    dn = buffer.detect{|attr| attr.match /^dn:/}.split(": ").last.chomp
+    tail = buffer[1] if buffer[1].match /^ .*/
+    head = buffer.first.split(": ").last
+    dn = if tail
+           head.strip + tail.strip
+         else
+           head.strip
+         end
+    dn
   rescue
     puts "Missing dn in: "
     puts buffer
