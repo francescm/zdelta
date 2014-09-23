@@ -52,7 +52,7 @@ while continue
   end
 end
 
-puts "stop signals received: #{stop_signals}; clients: #{CLIENTS}"
+puts "stop signals received: #{stop_signals}; clients: #{CLIENTS}" if $DEBUG
 puts "assembled #{entries.size} entries in #{Time.new - start_time}"
 puts
 

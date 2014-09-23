@@ -113,6 +113,8 @@ client_addrs.inject [] do |prev, el|
   prev << el
 end
 
+
+
 File.open(old_file).each_line do |l|
   if "\n".eql? l
     client = client_addrs[ progress % CLIENTS ]
@@ -120,10 +122,10 @@ File.open(old_file).each_line do |l|
     memory[dn] = client
     progress = progress + 1
     if (progress % 10000) == 0
-      puts "\r#{progress}"
+      puts "\r#{progress}" if $DEBUG
       new_time = Time.new
-      puts "total time : #{new_time - start_time}"
-      puts "incremental time : #{new_time - incremental}" if incremental
+      puts "total time : #{new_time - start_time}" if $DEBUG
+      puts "incremental time : #{new_time - incremental}" if incremental and $DEBUG
       incremental = new_time
     end
     buffer.clear
@@ -153,10 +155,10 @@ File.open(new_file).each_line do |l|
       send_data(socket, buffer, client)
       progress = progress + 1
       if (progress % 10000) == 0
-        puts "\r#{progress}"
+        puts "\r#{progress}" if $DEBUG
         new_time = Time.new
-        puts "total time : #{new_time - start_time}"
-        puts "incremental time : #{new_time - incremental}" if incremental
+        puts "total time : #{new_time - start_time}" if $DEBUG
+        puts "incremental time : #{new_time - incremental}" if incremental and $DEBUG
         incremental = new_time
       end
     else
